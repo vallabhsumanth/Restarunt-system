@@ -11,7 +11,7 @@ A local restaurant order and billing desktop app inspired by the linked restaura
 - SQLite order history, customer/order search, detailed receipts, and confirmed order deletion
 - Export orders to CSV, export a receipt to text, and delete orders
 
-This project uses Python’s built-in Tkinter modules:
+# Python’s built-in Tkinter modules:
 - tkinter (tk) for the window, frames, labels, buttons, and other widgets.
 - tkinter.ttk (ttk) for themed widgets such as buttons, entries, scrollbars, and tables.
 - tkinter.messagebox for confirmation and information pop-ups.
