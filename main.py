@@ -15,7 +15,8 @@ MENU = {
     "Mains": [("Margherita pizza", 280), ("Classic burger", 190), ("Veg biryani", 240), ("Pasta Alfredo", 260)],
     "Desserts": [("Chocolate brownie", 130), ("Vanilla ice cream", 80)],
     "Drinks": [("Fresh lime soda", 70), ("Masala chai", 40), ("Cold coffee", 120)],
-    "Specials": [("Tandoori platter", 360), ("Biryani bucket", 290), ("BBQ ribs", 380), ("Cheese fondue", 310), ("Dal makhani + Naan", 220)]
+    "Specials": [("Tandoori platter", 360), ("Biryani bucket", 290), ("BBQ ribs", 380), ("Cheese fondue", 310), ("Dal makhani + Naan", 220)],
+    "Fast Food":[("Pani Puri",40)]
 }
 BG, WHITE, INK, MUTED, GREEN = "#f3f6f5", "#ffffff", "#172923", "#65736e", "#176b57"
 
