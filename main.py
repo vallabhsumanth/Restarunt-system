@@ -370,12 +370,34 @@ class App:
             self.history()
 
     def export_csv(self):
-        path=filedialog.asksaveasfilename(defaultextension=".csv",initialfile="restaurant-orders.csv",filetypes=[("CSV file","*.csv")])
-        if not path:return
-        with self.db() as con: rows=con.execute("SELECT number,customer,created,subtotal,tax,total FROM orders ORDER BY id DESC").fetchall()
-        with open(path,"w",newline="",encoding="utf-8-sig") as f:
-            writer=csv.writer(f);writer.writerow(["Order number","Customer","Date and time","Subtotal","GST","Total"]);writer.writerows([tuple(row) for row in rows])
-        messagebox.showinfo("Export complete",f"Exported {len(rows)} orders.")
+        path = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export order history",
+            initialdir=str(HERE),
+            defaultextension=".csv",
+            initialfile="restaurant-orders.csv",
+            filetypes=[("CSV file", "*.csv")],
+        )
+        if not path:
+            return
+        try:
+            with self.db() as con:
+                rows = con.execute(
+                    "SELECT number,customer,created,subtotal,tax,total "
+                    "FROM orders ORDER BY id DESC"
+                ).fetchall()
+            with Path(path).open("w", newline="", encoding="utf-8-sig") as file:
+                writer = csv.writer(file)
+                writer.writerow(["Order number", "Customer", "Date and time", "Subtotal", "GST", "Total"])
+                writer.writerows(tuple(row) for row in rows)
+        except (OSError, sqlite3.Error, csv.Error, tk.TclError) as error:
+            messagebox.showerror("CSV export failed", f"Could not export the order history.\n\n{error}", parent=self.root)
+            return
+        messagebox.showinfo(
+            "Export complete",
+            f"Exported {len(rows)} orders to:\n{path}",
+            parent=self.root,
+        )
 
 
 if __name__ == "__main__":
