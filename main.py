@@ -83,8 +83,9 @@ class App:
         for r in rows: tree.insert("", "end", iid=str(r["id"]), values=(r["number"], r["customer"], r["created"], fmt(r["total"])))
         tree.pack(fill="both", expand=True)
         if not compact:
-            tree.bind("<Double-1>", lambda _e: self.receipt(tree.focus()) if tree.focus() else None)
             self.tree = tree
+            tree.bind("<Button-1>", self.on_history_click)
+            tree.bind("<Double-1>", self.on_history_double_click)
         return tree
 
     def dashboard(self):
@@ -227,7 +228,7 @@ class App:
         self.dashboard(); messagebox.showinfo("Order saved", f"{number} saved for {fmt(total)}.")
 
     def history(self):
-        self.clear(); self.header("Order history", "Search your saved orders. Double-click any row to open a receipt.")
+        self.clear(); self.header("Order history", "Click a customer name to see everything they ordered. Double-click an order for its receipt.")
         bar = tk.Frame(self.main, bg=BG); bar.pack(fill="x", padx=28, pady=(0, 12))
         self.search = tk.StringVar(); ttk.Entry(bar, textvariable=self.search, width=38).pack(side="left")
         ttk.Button(bar, text="Export CSV", command=self.export_csv).pack(side="right", padx=(8, 0))
@@ -241,6 +242,87 @@ class App:
         with self.db() as con: rows = con.execute("SELECT * FROM orders WHERE number LIKE ? OR customer LIKE ? ORDER BY id DESC", (term, term)).fetchall()
         self.tree.delete(*self.tree.get_children())
         for r in rows: self.tree.insert("", "end", iid=str(r["id"]), values=(r["number"], r["customer"], r["created"], fmt(r["total"])))
+
+    def on_history_click(self, event):
+        """A single click on the customer column opens that customer's history."""
+        tree = event.widget
+        row_id = tree.identify_row(event.y)
+        if not row_id or tree.identify_column(event.x) != "#2":
+            return
+        if getattr(self, "_pending_customer_open", None):
+            self.root.after_cancel(self._pending_customer_open)
+        tree.selection_set(row_id)
+        customer = tree.item(row_id, "values")[1]
+        self._pending_customer_open = self.root.after(
+            280, lambda name=customer: self.customer_history(name)
+        )
+
+    def on_history_double_click(self, event):
+        """A double click opens the selected order receipt."""
+        if getattr(self, "_pending_customer_open", None):
+            self.root.after_cancel(self._pending_customer_open)
+            self._pending_customer_open = None
+        row_id = event.widget.identify_row(event.y)
+        if row_id:
+            self.receipt(row_id)
+
+    def customer_history(self, customer):
+        """Show every saved item for this customer, with order and lifetime totals."""
+        with self.db() as con:
+            orders = con.execute(
+                "SELECT id, number, created, total FROM orders "
+                "WHERE customer = ? COLLATE NOCASE ORDER BY id DESC", (customer,)
+            ).fetchall()
+            items = con.execute(
+                "SELECT o.id AS order_id, o.number, o.created, o.total AS order_total, "
+                "i.name, i.qty, i.price, i.amount FROM orders o "
+                "JOIN items i ON i.order_id = o.id "
+                "WHERE o.customer = ? COLLATE NOCASE ORDER BY o.id DESC, i.id", (customer,)
+            ).fetchall()
+        lifetime_total = sum((Decimal(str(order["total"])) for order in orders), Decimal("0"))
+        units = sum(item["qty"] for item in items)
+        self.clear()
+        self.header(f"Orders for {customer}", "Every item saved under this customer name. Double-click an item row to open its order receipt.")
+
+        cards = tk.Frame(self.main, bg=BG); cards.pack(fill="x", padx=28, pady=(0, 18))
+        for title, value in [("Orders", len(orders)), ("Items ordered", units), ("Total spent", fmt(lifetime_total))]:
+            card = tk.Frame(cards, bg=WHITE, padx=18, pady=14,
+                            highlightbackground="#e4ebe8", highlightthickness=1)
+            card.pack(side="left", fill="x", expand=True, padx=(0, 12))
+            tk.Label(card, text=title.upper(), bg=WHITE, fg=MUTED,
+                     font=("Helvetica", 9, "bold")).pack(anchor="w")
+            tk.Label(card, text=value, bg=WHITE, fg=INK,
+                     font=("Helvetica", 20, "bold")).pack(anchor="w", pady=(5, 0))
+
+        box = tk.Frame(self.main, bg=BG)
+        box.pack(fill="both", expand=True, padx=28, pady=(0, 18))
+        columns = ("created", "number", "item", "qty", "price", "amount", "order_total")
+        tree = ttk.Treeview(box, columns=columns, show="headings", height=15)
+        specs = [("created", "DATE & TIME", 155), ("number", "ORDER", 175),
+                 ("item", "ITEM ORDERED", 220), ("qty", "QTY", 65),
+                 ("price", "UNIT PRICE", 115), ("amount", "ITEM TOTAL", 120),
+                 ("order_total", "ORDER TOTAL", 125)]
+        for column, title, width in specs:
+            tree.heading(column, text=title)
+            tree.column(column, width=width, anchor="w" if column in ("created", "number", "item") else "e")
+        box.grid_columnconfigure(0, weight=1); box.grid_rowconfigure(0, weight=1)
+        tree.grid(row=0, column=0, sticky="nsew")
+        scroll = ttk.Scrollbar(box, orient="vertical", command=tree.yview)
+        scroll.grid(row=0, column=1, sticky="ns"); tree.configure(yscrollcommand=scroll.set)
+        seen_orders = set()
+        self.customer_item_orders = {}
+        for index, item in enumerate(items):
+            order_id = item["order_id"]
+            order_total = fmt(item["order_total"]) if order_id not in seen_orders else ""
+            seen_orders.add(order_id)
+            row_id = f"{order_id}-{index}"
+            tree.insert("", "end", iid=row_id, values=(item["created"], item["number"],
+                        item["name"], item["qty"], fmt(item["price"]), fmt(item["amount"]), order_total))
+            self.customer_item_orders[row_id] = order_id
+        tree.bind("<Double-1>", lambda event: self.receipt(
+            self.customer_item_orders.get(event.widget.identify_row(event.y))
+        ))
+        ttk.Button(self.main, text="Back to order history", command=self.history).pack(anchor="w", padx=28, pady=(0, 20))
 
     def receipt(self, order_id):
         if not order_id: return

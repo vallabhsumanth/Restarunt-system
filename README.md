@@ -8,7 +8,7 @@ A local restaurant order and billing desktop app inspired by the linked restaura
 - Keyboard shortcuts: Ctrl+1 dashboard, Ctrl+N new order, Ctrl+H order history, Esc reset menu filters
 - Menu grouped into starters, mains, desserts, and drinks
 - Live bill totals with editable GST rate
-- SQLite order history, customer/order search, detailed receipts, and confirmed order deletion
+- SQLite order history, customer/order search, customer item-by-item history with lifetime spend, detailed receipts, and confirmed order deletion
 - Export orders to CSV, export a receipt to text, and delete orders
 
 ## Python’s built-in Tkinter modules:
