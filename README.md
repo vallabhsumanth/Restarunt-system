@@ -1,6 +1,6 @@
 # Restaurant Desk (Tkinter)
 
-A local restaurant order and billing desktop app inspired by the linked restaurant management system. It uses Python's built-in `tkinter`, `sqlite3`, and standard library; no pip packages are needed.
+A local restaurant order and billing desktop app inspired by the linked restaurant management system. It uses Python's built-in `tkinter`, `sqlite3`, and standard library; no pip packages are needed. See `requirements.txt`.
 
 ## Features
 - Dashboard with today's order count and sales

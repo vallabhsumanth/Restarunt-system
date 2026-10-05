@@ -1,0 +1,2 @@
+# This project uses only Python's standard library; no pip packages are required.
+# Make sure your Python installation includes Tkinter/Tcl-Tk.
